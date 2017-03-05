@@ -1,0 +1,101 @@
+---
+title: "Exploring Data"
+author: "Rory Murphy"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+options(digits = 2)
+```
+
+# Exploring the Video Games dataset
+
+An introduction to exploring data and how toget a first look at what you have. We will take a look at the video games dataset from Kaggle.
+
+```{r environment_setup, echo=FALSE, error=TRUE, warning=TRUE}
+library(ggplot2)
+games = read.csv("../Datasets/video-game-sales-with-ratings/Video_Games_Sales_as_at_22_Dec_2016.csv", header=TRUE, na.strings = "")
+```
+
+## Amount of Data
+
+It is good to know the quantum of data we are working with here. We can see that the Video Games dataset contains `r dim(games)[1]` rows of data in `r dim(games)[2]` columns.
+
+```{r dimensions, echo=TRUE}
+dim(games)
+```
+
+## Looking at the Data
+
+A quick look at the first few rows goes a long way in seeing what we are dealing with here
+
+```{r head, echo=TRUE}
+head(games)
+```
+
+## Summary
+
+Summary gives a very quick view into the dataset. 
+The video games dataset here shows us each games, it developer and publisher, its total and regional sales and ratings scores. 
+
+```{r summary, echo=TRUE}
+summary(games)
+```
+
+We can also have a look of the structure of the object we have read in to R, so we can get an idea of how we might need to manipulate it.
+
+```{r structure, echo=TRUE}
+str(games)
+```
+
+## Missing Data
+
+There will always be missing data, so we want to get an understanding of how much is missing. It is best to do this on a column-by-column basis. Interestingly, for this dataset only a few columns have missing data.
+
+```{r missing_data, echo=TRUE}
+sapply(games, function(x) sum(is.na(x)))
+```
+
+We can also graph this as a way of seeing the proportion of data per column that is missing. This gives us an idea of how accurate any analysis we do on this column might be.
+
+```{r plot_missing_data, echo=TRUE}
+missing = data.frame(colnames(games)) #create new dataframe with the colnames as rows
+missing$totalRows = dim(games)[1] #add column totals
+missing$isNaRows = sapply(games, function(x) sum(is.na(x))) #add number of missing rows as new column
+
+g = ggplot(missing, aes(x = colnames.games., y = isNaRows))
+g = g + geom_point()
+g = g + ggtitle("Summary of missing rows")
+g = g + xlab("Row Name")
+g = g + ylab("Sum of missing rows")
+g = g + geom_hline(yintercept = max(missing$totalRows)) #add max rows line
+g = g + annotate("text", x = dim(missing)[1]/2, y = max(missing$totalRows)*1.1, label = "TotalRows")
+g = g + scale_y_continuous(limits = c(0, 20000)) #scale y for better viewing
+g + theme(axis.text.x = element_text(angle = 90)) #rotate x labels so we can read them
+```
+
+# Picking Feature
+
+We might want to pick out some features of the dataset to zoom in on. 
+
+## Amount of Titles per Platform
+
+Video games are typically tied to a platform, which is just another way of talking about the type of hardware needed to play the games. Let's look at the platforms with the most games available:
+
+```{r find_platforms, echo=TRUE}
+platforms = data.frame(table(games$Platform))
+platforms[order(-platforms$Freq),]
+```
+
+## Top Developers
+
+Similarly, we can take a look at the top developers of games, as per the amount of games they release. I don't expect this to be very valuable, but let's take a look anyway. To cut it down, let's only show the top 10 developers.
+
+```{r top_developers, echo=TRUE}
+developers = data.frame(table(games$Developer))
+developers = developers[order(-developers$Freq),]
+head(developers, 10) #only show top 10 rows
+```
+
+As we expected, this isn't very useful. Only `r sum(head(developers$Freq), 10) / sum(developers$Freq) * 100`% of games are developed by the top 10 developers.
