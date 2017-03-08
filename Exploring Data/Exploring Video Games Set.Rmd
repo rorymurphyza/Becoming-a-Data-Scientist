@@ -11,7 +11,7 @@ options(digits = 2)
 
 # Exploring the Video Games dataset
 
-An introduction to exploring data and how toget a first look at what you have. We will take a look at the video games dataset from Kaggle.
+An introduction to exploring data and how to get a first look at what you have. We will take a look at the video games dataset from Kaggle.
 
 ```{r environment_setup, echo=FALSE, error=TRUE, warning=TRUE}
 library(ggplot2)

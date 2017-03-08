@@ -1,0 +1,43 @@
+---
+title: "Exploring Data with Visuals"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+options(digits = 2)
+```
+
+# Exploring the Video Games Dataset with Visuals
+
+We started exploring the Video Games Dataset from Kaggle already, now let's add some analysis with visuals to get a better idea of what is going on with the data.
+
+```{r environment_setup, echo=FALSE, error=TRUE, warning=TRUE}
+library(ggplot2)
+suppressMessages(library(dplyr))
+suppressMessages(library(reshape2))
+games = read.csv("../Datasets/video-game-sales-with-ratings/Video_Games_Sales_as_at_22_Dec_2016.csv", header=TRUE, na.strings = "")
+```
+
+# Box and Whisker Plots
+
+These are a good way of visualising the median and first to third quartiles of our data. From the given dataset, we can see that the scores given to games lend themselves to a boxplot. Not too surprisingly, we can see that users (ie. game players) tend to be a little more generous in their scoring than critics are, which is probably why they are called critics.
+
+```{r boxplot_scores, echo=TRUE}
+scores = games %>% select(User_Score, Critic_Score)
+scores$User_Score = as.numeric(scores$User_Score)
+scores$Critic_Score = as.numeric(scores$Critic_Score)
+scores = melt(scores, measure.vars = c("User_Score", "Critic_Score"), na.rm = TRUE) #melt to get variables right for boxplot
+g = ggplot(scores, aes(variable, value))
+g = g + stat_boxplot(geom = "errorbar") #add whiskers
+g = g + geom_boxplot()  #add boxplot
+g
+```
+
+## Histogram
+
+Let's use histograms to show the disibution of video game sales per region.
+
+```{r sales_histogram, echo=TRUE}
+
+```
