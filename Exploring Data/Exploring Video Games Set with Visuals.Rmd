@@ -16,7 +16,15 @@ We started exploring the Video Games Dataset from Kaggle already, now let's add 
 library(ggplot2)
 suppressMessages(library(dplyr))
 suppressMessages(library(reshape2))
+suppressMessages(library(gridExtra))
+library(corrplot)
+library(scales)
 games = read.csv("../Datasets/video-game-sales-with-ratings/Video_Games_Sales_as_at_22_Dec_2016.csv", header=TRUE, na.strings = "")
+games$NA_Sales = games$NA_Sales * 1000000
+games$EU_Sales = games$EU_Sales * 1000000
+games$JP_Sales = games$JP_Sales * 1000000
+games$Other_Sales = games$Other_Sales * 1000000
+games$Global_Sales = games$Global_Sales * 1000000
 ```
 
 # Box and Whisker Plots
@@ -36,8 +44,91 @@ g
 
 ## Histogram
 
-Let's use histograms to show the disibution of video game sales per region.
+Let's use histograms to show the disibution of video game sales per region. We can see from the graph below that this is not a very useful way of visualising what is going on here. The data is showing us that we have a large number of games with less than 1000 sales per region. 
 
 ```{r sales_histogram, echo=TRUE}
+gNA = ggplot(games, aes(NA_Sales)) + geom_histogram(binwidth = 100000) + coord_flip() 
+gEU = ggplot(games, aes(EU_Sales)) + geom_histogram(binwidth = 100000) + coord_flip()
+gJP = ggplot(games, aes(JP_Sales)) + geom_histogram(binwidth = 100000) + coord_flip()
+gOther = ggplot(games, aes(Global_Sales)) + geom_histogram(binwidth = 100000) + coord_flip()
+grid.arrange(gNA, gEU, gJP, gOther, ncol = 1)
+rm(gNA, gEU, gJP, gOther) #always keep your workspace tidy
 
+#same plot, but using ggplot entirely
+scores = games %>% select(NA_Sales, EU_Sales, JP_Sales, Other_Sales) %>% melt()
+g = ggplot(scores, aes(value))
+g = g + geom_bar()
+g = g + facet_grid(. ~ variable)
+g = g + coord_flip()
+g = g + scale_x_continuous(labels = comma)
+g
 ```
+
+Let's now have a look at games that have sold more than 1000 units in each region to see what this can tell us. This should eliminate games that didn't sell very well. This gives us a slightly more clear picture of the distribution of games sales.
+
+```{r sales_over_1000, echo=TRUE}
+sales = games %>% filter(NA_Sales > 1000000 | EU_Sales > 1000000 | JP_Sales > 1000000 | Other_Sales > 1000000)%>% select(NA_Sales, EU_Sales, JP_Sales, Other_Sales) %>% melt()
+g = ggplot(sales, aes(value, fill=as.factor(variable)))
+g = g + geom_histogram(bins = 50)
+g = g + xlab("Sales")
+g = g + scale_x_continuous(labels = comma, limits = c(0, 10000000))
+g
+```
+
+Now, let's take a look at total sales by region to see where we can expect to sell the most games. This will not give us anything really interesting as game sales rely on many more factors, but it could tell us where to aim our next game we want to deliver. As we would expect, the North America region makes up the single biggest market, making up nearly half of global sales
+
+```{r sales_by_region, echo=TRUE}
+sales = games %>% select(NA_Sales, EU_Sales, JP_Sales, Other_Sales, Global_Sales) %>% summarise_each(funs(sum)) %>% melt()
+g = ggplot(sales, aes(x = variable, y = value, fill = as.factor(variable)))
+g = g + geom_bar(stat = "identity")
+g = g + scale_y_continuous(labels = comma)
+g = g + xlab("Sales Area")
+g = g + ylab("Total Sales")
+g
+
+#plot a pie chart, just out of interest
+sales = games %>% select(NA_Sales, EU_Sales, JP_Sales, Other_Sales) %>% summarise_each(funs(sum)) %>% melt()
+g = ggplot(sales, aes(y = value, fill=as.factor(variable)))
+# to-do: get this to work
+```
+
+Similarly to what we have already done, let's see what the top platforms are. We can see that the top platforms are the PS2, DS, PS3, Wii and X360.
+
+```{r platforms, echo=TRUE}
+platforms = games %>% select(Platform)
+g = ggplot(platforms, aes(x=reorder(Platform, Platform, function(x) - length(x)), fill=as.factor(Platform))) #reorder the bars for largest to smallest
+g = g + geom_bar()
+g = g + theme(axis.text.x=element_text(angle = 90, hjust = 1))
+g = g + xlab("Platform")
+g
+```
+
+## Correlations
+
+We can start looking at correlations in the data. Let's look at the correlation between Critic Scores and User Scores. We would expect these to be well correlated although as we saw earlier, the User Scores were typically higher than the Critics'. We also want to look at the correlation between scores and total sales.
+
+```{r correlations, echo=TRUE}
+corrScore = games %>% select(Critic_Score, User_Score)
+corrScore = corrScore[complete.cases(corrScore), ] #remove missing scores
+corrScore$User_Score = as.numeric(corrScore$User_Score)
+corrplot.mixed(cor(corrScore),lower = "pie", upper = "number") #there are tons of other ways to plot this
+
+corrSales = games %>% select(Critic_Score, User_Score, NA_Sales, EU_Sales, JP_Sales, Other_Sales, Global_Sales)
+corrSales$User_Score = as.numeric(corrSales$User_Score)
+corrSales = corrSales[complete.cases(corrSales), ] #remove missing data
+corrplot.mixed(cor(corrSales), lower = "pie", upper = "number")
+```
+
+Interestingly, we can see here that Critic Score only correlates fairly lowly with actual sales. It is important to see that North America and European sales correlate quite closely, which implies that both markets like the same types of games.
+
+##Scatterplot
+
+Let's take a look at how games development and releases have gone over the years. for the top 5 platforms.
+
+```{r scatterplot, echo=TRUE}
+development = games %>% select(Platform, Year_of_Release) %>% filter(Platform == "PS2" | Platform == "DS" | Platform == "PS3" | Platform == "Wii" | Platform == "X360")
+g = ggplot(development, aes(x = Year_of_Release, y = Platform))
+g = g + geom_jitter()
+g
+```
+
